@@ -34,7 +34,7 @@ public class Files.TrashMonitor : GLib.Object {
     private GLib.File trash_file;
 
     construct {
-        icon = new GLib.ThemedIcon ("user-trash");
+        icon = new GLib.ThemedIcon ("user-trash-symbolic");
         trash_file = GLib.File.new_for_uri (TrashMonitor.URI);
         try {
             file_monitor = trash_file.monitor (GLib.FileMonitorFlags.NONE);

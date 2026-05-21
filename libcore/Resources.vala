@@ -25,31 +25,33 @@ namespace Files {
     public const string INVALID_TAB_NAME = "----";
 
     public const string ICON_APP_LOGO = "system-file-manager";
-    public const string ICON_FILESYSTEM = "drive-harddisk-system";
+    /* Patched: point colored constants to symbolic variants so sidebar shows
+     * monochrome icons (GNOME-style), not elementary's colored ones */
+    public const string ICON_FILESYSTEM = "drive-harddisk-symbolic";
     public const string ICON_FILESYSTEM_SYMBOLIC = "drive-harddisk-symbolic";
-    public const string ICON_FOLDER = "folder";
+    public const string ICON_FOLDER = "folder-symbolic";
     public const string ICON_FOLDER_DOCUMENTS_SYMBOLIC = "folder-documents-symbolic";
     public const string ICON_FOLDER_DOWNLOADS_SYMBOLIC = "folder-download-symbolic";
     public const string ICON_FOLDER_MUSIC_SYMBOLIC = "folder-music-symbolic";
     public const string ICON_FOLDER_PICTURES_SYMBOLIC = "folder-pictures-symbolic";
     public const string ICON_FOLDER_PUBLICSHARE_SYMBOLIC = "folder-publicshare-symbolic";
-    public const string ICON_FOLDER_REMOTE = "folder-remote";
+    public const string ICON_FOLDER_REMOTE = "folder-remote-symbolic";
     public const string ICON_FOLDER_REMOTE_SYMBOLIC = "folder-remote-symbolic";
     public const string ICON_FOLDER_TEMPLATES_SYMBOLIC = "folder-templates-symbolic";
     public const string ICON_FOLDER_VIDEOS_SYMBOLIC = "folder-videos-symbolic";
     public const string ICON_GO_HOME_SYMBOLIC = "go-home-symbolic";
-    public const string ICON_HOME = "user-home";
+    public const string ICON_HOME = "user-home-symbolic";
     public const string ICON_DEVICE_PHONE_SYMBOLIC = "phone-symbolic";
     public const string ICON_DEVICE_CAMERA_SYMBOLIC = "camera-photo-symbolic";
     public const string ICON_DEVICE_REMOVABLE_MEDIA_SYMBOLIC = "media-removable-symbolic";
     public const string ICON_NETWORK_SYMBOLIC = "network-workgroup-symbolic";
-    public const string ICON_NETWORK = "network-workgroup";
+    public const string ICON_NETWORK = "network-workgroup-symbolic";
     public const string ICON_NETWORK_SERVER_SYMBOLIC = "network-server-symbolic";
-    public const string ICON_NETWORK_SERVER = "network-server";
-    public const string ICON_TRASH = "user-trash";
-    public const string ICON_TRASH_FULL = "user-trash-full";
+    public const string ICON_NETWORK_SERVER = "network-server-symbolic";
+    public const string ICON_TRASH = "user-trash-symbolic";
+    public const string ICON_TRASH_FULL = "user-trash-full-symbolic";
     public const string ICON_TRASH_SYMBOLIC = "user-trash-symbolic";
-    public const string ICON_RECENT = "document-open-recent";
+    public const string ICON_RECENT = "document-open-recent-symbolic";
     public const string ICON_RECENT_SYMBOLIC = "document-open-recent-symbolic";
     public const string ICON_PATHBAR_PRIMARY_FIND_SYMBOLIC = "edit-find-symbolic";
     public const string ICON_PATHBAR_SECONDARY_NAVIGATE_SYMBOLIC = "go-jump-symbolic";

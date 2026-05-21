@@ -1,0 +1,5 @@
+#!/bin/bash
+export LD_LIBRARY_PATH=/opt/pantheon-files/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+export GSETTINGS_SCHEMA_DIR=/opt/pantheon-files/share/glib-2.0/schemas
+export XDG_DATA_DIRS=/opt/pantheon-files/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}
+exec /opt/pantheon-files/bin/io.elementary.files-pkexec "$@"

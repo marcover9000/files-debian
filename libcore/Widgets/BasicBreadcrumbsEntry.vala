@@ -745,8 +745,6 @@ namespace Files.View.Chrome {
                 int layout_width, layout_height;
                 double text_width, text_height;
                 Pango.Layout layout;
-                /** TODO - Get offset due to margins from style context **/
-                int icon_width = primary_icon_pixbuf != null ? primary_icon_pixbuf.width + 5 : 0;
 
                 Gdk.RGBA rgba;
                 var colored = get_style_context ().lookup_color ("placeholder_text_color", out rgba);
@@ -770,12 +768,18 @@ namespace Files.View.Chrome {
                 layout.get_size (out layout_width, out layout_height);
                 text_width = Pango.units_to_double (layout_width);
                 text_height = Pango.units_to_double (layout_height);
-                /** TODO - Get offset due to margins from style context **/
-                var vertical_offset = get_allocated_height () / 2 - text_height / 2;
+
+                /* Patched: position the placeholder/completion using the native
+                 * Gtk.Entry layout offsets, which already account for the primary
+                 * icon, padding and any CSS icon margin. This keeps the placeholder
+                 * aligned with where typed text and the cursor actually appear
+                 * (the old manual "icon_width + 6" calc drifted out of sync). */
+                int layout_x, layout_y;
+                get_layout_offsets (out layout_x, out layout_y);
                 if (is_rtl) {
-                   cr.move_to (width - (text_width + icon_width + 6), vertical_offset);
+                   cr.move_to (layout_x - text_width, layout_y);
                 } else {
-                   cr.move_to (text_width + icon_width + 6, vertical_offset);
+                   cr.move_to (layout_x + text_width, layout_y);
                 }
 
                 layout.set_text (placeholder, -1);

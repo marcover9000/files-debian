@@ -1,0 +1,280 @@
+
+@import 'colors.css';
+
+/* ============================================================
+ * Pantheon Files (io.elementary.files) — GNOME-friendly tweaks
+ * Override granite sidebar styling to look closer to Nautilus.
+ * Remove this block if it causes issues in other GTK3 apps.
+ * ============================================================ */
+
+/* Compact rows: smaller padding, but with left margin + breathing room */
+.sidebar list row,
+placessidebar row {
+    min-height: 30px;
+    padding: 3px 8px 3px 12px;
+}
+
+/* Sidebar icons — margin from the text + slight transparency
+ * (GTK3 CSS can't resize icons; use min-width as a hint) */
+.sidebar list row image,
+placessidebar row image,
+.sidebar list row > box > image {
+    min-width: 18px;
+    min-height: 18px;
+    margin-right: 8px;
+    opacity: 0.85;
+}
+
+/* Whole sidebar container — give it some left breathing room */
+placessidebar,
+.sidebar {
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+/* Section headers (Adreces d'interès / Emmagatzematge / Xarxa):
+ * smaller, semi-transparent — GNOME style
+ * (note: GTK CSS doesn't support text-transform; can't force uppercase) */
+.sidebar list row.has-open-popup,
+.sidebar > viewport > list > row > revealer > box > label.h4,
+.sidebar .h4,
+placessidebar > viewport > list > row > revealer > box > label {
+    font-size: 0.78em;
+    font-weight: bold;
+    opacity: 0.55;
+    margin-top: 8px;
+    margin-bottom: 2px;
+    padding-left: 12px;
+}
+
+/* Less aggressive separators between sections */
+.sidebar separator,
+placessidebar separator {
+    margin: 0;
+    min-height: 0;
+    background-color: transparent;
+}
+
+/* Selected row: GNOME pill style with soft Adwaita accent
+ * (translucent blue, not solid elementary fill) */
+.sidebar list row:selected,
+placessidebar row:selected {
+    border-radius: 6px;
+    margin-left: 6px;
+    margin-right: 6px;
+    background-color: alpha(#3584e4, 0.18);
+    color: @theme_fg_color;
+}
+.sidebar list row:selected:hover,
+placessidebar row:selected:hover {
+    background-color: alpha(#3584e4, 0.25);
+}
+
+/* Hover state on idle rows — subtle GNOME-style highlight */
+.sidebar list row:hover:not(:selected),
+placessidebar row:hover:not(:selected) {
+    background-color: alpha(currentColor, 0.06);
+    border-radius: 6px;
+    margin-left: 6px;
+    margin-right: 6px;
+    transition: background-color 120ms ease-out;
+}
+
+/* Footer "Connecta't a un servidor..." button — more discreet */
+placessidebar > actionbar,
+.sidebar > actionbar {
+    padding: 2px 6px;
+    border-top: 1px solid alpha(currentColor, 0.08);
+    background: transparent;
+}
+placessidebar > actionbar button,
+.sidebar > actionbar button {
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: transparent;
+    border: none;
+    opacity: 0.75;
+}
+placessidebar > actionbar button:hover,
+.sidebar > actionbar button:hover {
+    background-color: alpha(currentColor, 0.06);
+    opacity: 1;
+}
+
+/* Storage progress bar (Sistema de fitxers): subtler */
+.sidebar progressbar trough,
+placessidebar progressbar trough {
+    min-height: 3px;
+}
+.sidebar progressbar progress,
+placessidebar progressbar progress {
+    min-height: 3px;
+}
+
+/* ============================================================
+ * Headerbar — make it less "elementary", more GNOME-like
+ * ============================================================ */
+
+/* Compact headerbar with GNOME-style background */
+headerbar {
+    padding: 3px 6px;
+    min-height: 40px;
+    border-bottom: 1px solid alpha(currentColor, 0.08);
+}
+
+/* Flat buttons (back/forward, menu, reload) with GNOME pill radius */
+headerbar button.flat,
+headerbar button.image-button {
+    border-radius: 6px;
+    padding: 4px 8px;
+    min-width: 28px;
+    min-height: 28px;
+    margin: 2px;
+}
+
+/* View mode switcher (grid/list/columns) — give the 3 buttons
+ * a subtle background as a linked group */
+headerbar > box > box > button:not(.titlebutton),
+headerbar .linked > button {
+    border-radius: 6px;
+    padding: 3px 6px;
+    min-width: 28px;
+    min-height: 28px;
+}
+
+/* Active/checked toggle in view switcher — softer than elementary blue */
+headerbar button:checked,
+headerbar button.toggle:checked {
+    background: alpha(currentColor, 0.12);
+    box-shadow: none;
+}
+
+/* Path bar (breadcrumbs) — flat, GNOME-like */
+.pathbar,
+.location-bar,
+headerbar entry {
+    background: transparent;
+    border-radius: 6px;
+}
+
+/* Search/navigate icon (lupa) was sitting right on top of the placeholder
+ * text. Give the entry's left icon some breathing room before the text. */
+.pathbar image.left,
+.location-bar image.left,
+headerbar entry image.left,
+.pathbar > image:first-child,
+headerbar entry > image:first-child {
+    margin-left: 4px;
+    margin-right: 10px;
+}
+
+/* When the location bar is in edit mode (Ctrl+L) it becomes a real text
+ * entry. The path was rendering faint/washed-out because the theme dims
+ * "unfocused/backdrop" entry text to a light gray (Breeze #aaabac; Adwaita
+ * also dims backdrop). Force a solid, crisp text color in EVERY state, plus
+ * an opaque GNOME-style field. */
+.pathbar,
+.pathbar:focus,
+.pathbar:backdrop,
+.pathbar:backdrop:focus,
+.location-bar,
+.location-bar:focus,
+.location-bar:backdrop,
+headerbar entry,
+headerbar entry:focus,
+headerbar entry:backdrop,
+headerbar entry:backdrop:focus {
+    color: @theme_fg_color;
+    opacity: 1;
+    text-shadow: none;
+    -gtk-icon-shadow: none;
+    caret-color: @theme_text_color;
+}
+
+/* Selected text in the location entry. On Ctrl+L the whole path is selected,
+ * and the theme rendered it low-contrast (light fg on a light/undrawn
+ * selection) — that was the "strange" washed look. Force a clear translucent
+ * blue highlight with solid dark text, readable regardless of the field bg. */
+.pathbar selection,
+.pathbar:focus selection,
+.location-bar selection,
+headerbar entry selection,
+headerbar entry:focus selection {
+    background-color: alpha(#3584e4, 0.30);
+    color: @theme_fg_color;
+    text-shadow: none;
+}
+
+/* Opaque field + subtle accent border only while actually editing */
+.pathbar:focus,
+.location-bar:focus,
+headerbar entry:focus {
+    background-color: @theme_base_color;
+    box-shadow: inset 0 0 0 1px alpha(#3584e4, 0.55);
+}
+
+.pathbar button,
+headerbar > * .pathbar > * {
+    background: transparent;
+    border: none;
+    padding: 2px 6px;
+}
+
+/* Tabs row below headerbar: GNOME tabs are more compact */
+notebook > header tab {
+    min-height: 28px;
+    padding: 2px 8px;
+    border-radius: 6px 6px 0 0;
+}
+
+/* ============================================================
+ * Context menu (right-click) — GNOME-like, compact
+ * ============================================================ */
+menu,
+.menu,
+.context-menu {
+    background-color: shade(@theme_bg_color, 1.02);
+    border-radius: 8px;
+    padding: 4px 0;
+    border: 1px solid alpha(currentColor, 0.1);
+}
+
+menu menuitem,
+.menu menuitem {
+    padding: 6px 14px;
+    min-height: 24px;
+    border-radius: 4px;
+    margin: 0 4px;
+}
+
+menu menuitem:hover,
+.menu menuitem:hover {
+    background-color: alpha(#3584e4, 0.15);
+}
+
+menu separator,
+.menu separator {
+    margin: 4px 8px;
+    min-height: 1px;
+    background-color: alpha(currentColor, 0.1);
+}
+
+/* ============================================================
+ * File panel background — slight GNOME gray, not pure white
+ * ============================================================ */
+.view,
+treeview.view,
+iconview,
+flowbox,
+.iconview {
+    background-color: shade(@theme_base_color, 0.98);
+}
+
+/* Keep selection clean on the gray background */
+.view:selected,
+treeview.view:selected,
+iconview:selected,
+.iconview:selected {
+    background-color: alpha(#3584e4, 0.25);
+    color: @theme_fg_color;
+}

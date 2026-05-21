@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="folder-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#62a0ea"/>
+      <stop offset="1" stop-color="#3584e4"/>
+    </linearGradient>
+    <filter id="soft-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1.2"/>
+      <feOffset dy="1"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.25"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Folder tab (darker, back) -->
+  <path d="M 12 32 L 12 26 Q 12 18 20 18 L 46 18 Q 50 18 52 21 L 60 30 L 110 30 Q 118 30 118 38 L 118 42 L 12 42 Z"
+        fill="#1c71d8"/>
+
+  <!-- Folder body -->
+  <rect x="12" y="38" width="106" height="76" rx="9" fill="url(#folder-grad)" filter="url(#soft-shadow)"/>
+
+  <!-- Miller columns (decreasing opacity, suggests "drill-down") -->
+  <rect x="24" y="54" width="20" height="52" rx="3" fill="#ffffff" opacity="0.96"/>
+  <rect x="48" y="54" width="20" height="52" rx="3" fill="#ffffff" opacity="0.78"/>
+  <rect x="72" y="54" width="20" height="52" rx="3" fill="#ffffff" opacity="0.58"/>
+  <rect x="96" y="54" width="14" height="52" rx="3" fill="#ffffff" opacity="0.38"/>
+
+  <!-- Subtle highlight inside first column to suggest "file selected" -->
+  <rect x="26" y="60" width="16" height="3" rx="1.5" fill="#3584e4" opacity="0.6"/>
+  <rect x="26" y="68" width="12" height="3" rx="1.5" fill="#3584e4" opacity="0.4"/>
+</svg>

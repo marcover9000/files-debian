@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=io.elementary.files.db
+Exec=/home/marc/.local/bin/io.elementary.files-daemon

@@ -46,7 +46,9 @@
 
     void on_name_lost (DBusConnection connection, string name) {
         critical ("Name %s was not acquired", name);
-        exit (-1);
+        if (name == "io.elementary.files.db") {
+            exit (-1);
+        }
     }
 
     void main () {

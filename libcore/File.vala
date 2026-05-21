@@ -442,22 +442,52 @@ public class Files.File : GLib.Object {
             return;
         }
 
+        /* Patched: use COLORED special-dir icons here (not the symbolic ones
+         * from get_icon_user_special_dirs). The content view must stay colored;
+         * symbolic icons are reserved for the sidebar (via Bookmark.get_icon).
+         * XDG special folders get their distinctive colored variant, everything
+         * else gets the plain colored "folder". */
         if (!is_hidden && uri != null) {
             try {
                 var path = GLib.Filename.from_uri (uri);
-                icon = get_icon_user_special_dirs (path);
+                icon = get_colored_icon_user_special_dirs (path);
             } catch (Error e) {
                 debug (e.message);
             }
         }
 
         if (icon == null && !location.is_native () && is_remote_uri_scheme ()) {
-            icon = new GLib.ThemedIcon ("folder-remote");
+            icon = new GLib.ThemedIcon ("folder-remote-symbolic");
         }
 
         if (icon == null) {
             icon = new GLib.ThemedIcon ("folder");
         }
+    }
+
+    /* Colored counterpart of get_icon_user_special_dirs, for the content view. */
+    public GLib.Icon? get_colored_icon_user_special_dirs (string path) {
+        if (path == GLib.Environment.get_home_dir ()) {
+            return new GLib.ThemedIcon ("user-home");
+        } else if (path == GLib.Environment.get_user_special_dir (GLib.UserDirectory.DESKTOP)) {
+            return new GLib.ThemedIcon ("user-desktop");
+        } else if (path == GLib.Environment.get_user_special_dir (GLib.UserDirectory.DOCUMENTS)) {
+            return new GLib.ThemedIcon ("folder-documents");
+        } else if (path == GLib.Environment.get_user_special_dir (GLib.UserDirectory.DOWNLOAD)) {
+            return new GLib.ThemedIcon ("folder-download");
+        } else if (path == GLib.Environment.get_user_special_dir (GLib.UserDirectory.MUSIC)) {
+            return new GLib.ThemedIcon ("folder-music");
+        } else if (path == GLib.Environment.get_user_special_dir (GLib.UserDirectory.PICTURES)) {
+            return new GLib.ThemedIcon ("folder-pictures");
+        } else if (path == GLib.Environment.get_user_special_dir (GLib.UserDirectory.PUBLIC_SHARE)) {
+            return new GLib.ThemedIcon ("folder-publicshare");
+        } else if (path == GLib.Environment.get_user_special_dir (GLib.UserDirectory.TEMPLATES)) {
+            return new GLib.ThemedIcon ("folder-templates");
+        } else if (path == GLib.Environment.get_user_special_dir (GLib.UserDirectory.VIDEOS)) {
+            return new GLib.ThemedIcon ("folder-videos");
+        }
+
+        return null;
     }
 
     // This re-fetches the icon even if we already have pixbuf of the same size.
@@ -620,7 +650,7 @@ public class Files.File : GLib.Object {
         if (is_directory) {
             get_folder_icon_from_uri_or_path ();
         } else if (info.get_file_type () == GLib.FileType.MOUNTABLE) {
-            icon = new GLib.ThemedIcon.with_default_fallbacks ("folder-remote");
+            icon = new GLib.ThemedIcon.with_default_fallbacks ("folder-remote-symbolic");
         } else {
             unowned string? ftype = get_ftype ();
             if (ftype != null && icon == null) {
@@ -1224,23 +1254,23 @@ public class Files.File : GLib.Object {
 
     public GLib.Icon? get_icon_user_special_dirs (string path) {
         if (path == GLib.Environment.get_home_dir ()) {
-            return new GLib.ThemedIcon ("user-home");
+            return new GLib.ThemedIcon ("user-home-symbolic");
         } else if (path == GLib.Environment.get_user_special_dir (GLib.UserDirectory.DESKTOP)) {
-            return new GLib.ThemedIcon ("user-desktop");
+            return new GLib.ThemedIcon ("user-desktop-symbolic");
         } else if (path == GLib.Environment.get_user_special_dir (GLib.UserDirectory.DOCUMENTS)) {
-            return new GLib.ThemedIcon ("folder-documents");
+            return new GLib.ThemedIcon ("folder-documents-symbolic");
         } else if (path == GLib.Environment.get_user_special_dir (GLib.UserDirectory.DOWNLOAD)) {
-            return new GLib.ThemedIcon ("folder-download");
+            return new GLib.ThemedIcon ("folder-download-symbolic");
         } else if (path == GLib.Environment.get_user_special_dir (GLib.UserDirectory.MUSIC)) {
-            return new GLib.ThemedIcon ("folder-music");
+            return new GLib.ThemedIcon ("folder-music-symbolic");
         } else if (path == GLib.Environment.get_user_special_dir (GLib.UserDirectory.PICTURES)) {
-            return new GLib.ThemedIcon ("folder-pictures");
+            return new GLib.ThemedIcon ("folder-pictures-symbolic");
         } else if (path == GLib.Environment.get_user_special_dir (GLib.UserDirectory.PUBLIC_SHARE)) {
-            return new GLib.ThemedIcon ("folder-publicshare");
+            return new GLib.ThemedIcon ("folder-publicshare-symbolic");
         } else if (path == GLib.Environment.get_user_special_dir (GLib.UserDirectory.TEMPLATES)) {
-            return new GLib.ThemedIcon ("folder-templates");
+            return new GLib.ThemedIcon ("folder-templates-symbolic");
         } else if (path == GLib.Environment.get_user_special_dir (GLib.UserDirectory.VIDEOS)) {
-            return new GLib.ThemedIcon ("folder-videos");
+            return new GLib.ThemedIcon ("folder-videos-symbolic");
         }
 
         return null;
