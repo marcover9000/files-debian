@@ -26,6 +26,14 @@
 */
 
 namespace Files {
+    /* GNOME Sushi quick-preview (the same previewer Nautilus uses).
+     * v2 takes a window-handle string, so it works on Wayland too. */
+    [DBus (name = "org.gnome.NautilusPreviewer2")]
+    interface NautilusPreviewer : GLib.Object {
+        public abstract void show_file (string uri, string window_handle, bool close_if_already_shown) throws GLib.Error;
+        public abstract void close () throws GLib.Error;
+    }
+
     public abstract class AbstractDirectoryView : Gtk.Bin {
     //TODO Reorder property declarations
         protected enum ClickZone {
@@ -603,6 +611,28 @@ namespace Files {
 
         protected void load_root_location (GLib.File location) {
             path_change_request (location, Files.OpenFlag.DEFAULT, true);
+        }
+
+    /** Quick preview of the selected file via GNOME Sushi (Space key). */
+        protected void preview_selected_file () {
+            unowned GLib.List<Files.File> selection = get_selected_files ();
+            if (selection == null) {
+                return;
+            }
+
+            unowned Files.File file = selection.data;
+            try {
+                NautilusPreviewer previewer = GLib.Bus.get_proxy_sync (
+                    GLib.BusType.SESSION,
+                    "org.gnome.NautilusPreviewer",
+                    "/org/gnome/NautilusPreviewer"
+                );
+                /* Empty window handle: preview shows unparented (fine on Wayland).
+                 * close_if_already_shown = true gives Quick-Look-style toggle. */
+                previewer.show_file (file.uri, "", true);
+            } catch (GLib.Error e) {
+                warning ("Unable to preview file (is gnome-sushi installed?): %s", e.message);
+            }
         }
 
     /** Operations on selections */
@@ -2969,7 +2999,7 @@ namespace Files {
 
                 case Gdk.Key.space:
                     if (view_has_focus () && !in_trash) {
-                        activate_selected_items (Files.OpenFlag.NEW_TAB);
+                        preview_selected_file ();
                         res = true;
                     }
 

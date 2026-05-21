@@ -12,6 +12,17 @@ Fork d'[elementary/files](https://github.com/elementary/files) sobre el tag **7.
 - **`libcore/Bookmark.vala`** — `get_icon()` retorna icones simbòliques per al **sidebar** (carpetes/punts de muntatge).
 - **`libcore/File.vala`** — la **vista de contingut** usa icones de **color** (`get_colored_icon_user_special_dirs`), no simbòliques. Convenció: simbòliques només al sidebar, color al contingut.
 - **`libcore/Widgets/BasicBreadcrumbsEntry.vala`** — el placeholder/autocompletat de la barra de ruta es posiciona amb `get_layout_offsets()` perquè quedi alineat amb el cursor.
+- **`src/View/AbstractDirectoryView.vala`** — **Quick Look** estil macOS: la tecla **Espai** crida GNOME Sushi (`org.gnome.NautilusPreviewer2` per D-Bus) per previsualitzar el fitxer seleccionat, en comptes d'obrir-lo en pestanya.
+
+## Quick Look (GNOME Sushi)
+
+Per a la previsualització amb Espai cal **gnome-sushi** instal·lat (`sudo apt install gnome-sushi`). Dos retocs de Sushi (a `gnome-integration/sushi/` i `gnome-integration/icons/`):
+
+- **Fons clar**: Sushi força sempre l'esquema fosc `builder-dark`. Substituir
+  `/usr/share/sushi/gtksourceview-4/styles/builder-dark.style-scheme.xml` per la versió clara
+  de `gnome-integration/sushi/` (fes-ne còpia de seguretat; reversible amb `apt reinstall gnome-sushi`).
+- **Icona**: Sushi no porta icona. Copiar `gnome-integration/icons/org.gnome.NautilusPreviewer.svg`
+  a `~/.local/share/icons/hicolor/scalable/apps/` perquè la barra superior de GNOME no mostri la icona trencada.
 
 ## Compilar
 
