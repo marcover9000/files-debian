@@ -34,16 +34,77 @@ namespace Files.View {
         private uint update_timeout_id = 0;
         private DeepCount? deep_counter = null;
         private uint deep_count_timeout_id = 0;
+        private uint folder_item_count = 0;
+        private GLib.File? summary_location = null;
+        private string? cached_free_space = null;
+        private Cancellable? free_space_cancellable = null;
 
-        public OverlayBar (Gtk.Overlay overlay) {
-            base (overlay); /* This adds the overlaybar to the overlay (ViewContainer). */
+        public OverlayBar (Gtk.Overlay? overlay = null) {
+            base (overlay); /* If overlay is null it is NOT added as an overlay child; ViewContainer packs it. */
         }
 
         construct {
             buffer = new uint8[IMAGE_LOADER_BUFFER_SIZE];
             label = "";
+            hexpand = true;
+            halign = Gtk.Align.FILL;
+            get_style_context ().add_class ("files-statusbar");
             hide.connect (cancel);
             show_all ();
+        }
+
+        /* Idle state (no selection): shows "N elements · X lliures". */
+        public void show_folder_summary (int item_count, GLib.File? location) {
+            cancel ();
+            reset_selection ();
+            folder_item_count = item_count < 0 ? 0 : (uint) item_count;
+
+            /* Invalidate the cached free space when the folder changes. */
+            if (summary_location == null || location == null || !summary_location.equal (location)) {
+                summary_location = location;
+                cached_free_space = null;
+            }
+
+            render_folder_summary ();
+
+            if (cached_free_space == null && summary_location != null) {
+                query_free_space.begin (summary_location);
+            }
+        }
+
+        private void render_folder_summary () {
+            /// TRANSLATORS: %u = number of items in the folder
+            string str = ngettext ("%u element", "%u elements", folder_item_count)
+                            .printf (folder_item_count);
+            if (cached_free_space != null) {
+                /// TRANSLATORS: %s = formatted free space (e.g. "87,3 GB")
+                str += " · " + _("%s lliures").printf (cached_free_space);
+            }
+
+            label = str;
+            visible = true;
+        }
+
+        private async void query_free_space (GLib.File location) {
+            if (free_space_cancellable != null) {
+                free_space_cancellable.cancel ();
+            }
+
+            free_space_cancellable = new Cancellable ();
+            try {
+                var info = yield location.query_filesystem_info_async (
+                    FileAttribute.FILESYSTEM_FREE, GLib.Priority.LOW, free_space_cancellable
+                );
+                if (info.has_attribute (FileAttribute.FILESYSTEM_FREE)) {
+                    cached_free_space = format_size (info.get_attribute_uint64 (FileAttribute.FILESYSTEM_FREE));
+                    render_folder_summary ();
+                }
+            } catch (Error e) {
+                /* Cancelled, or remote location without the attribute: degrade to count only. */
+                debug ("Free space query failed: %s", e.message);
+            }
+
+            free_space_cancellable = null;
         }
 
         ~OverlayBar () {
