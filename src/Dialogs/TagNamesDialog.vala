@@ -43,7 +43,10 @@ public class Files.View.TagNamesDialog : Granite.Dialog {
         }
 
         var content = new Gtk.Box (Gtk.Orientation.VERTICAL, 6) {
-            margin = 12
+            margin_start = 18,
+            margin_end = 18,
+            margin_top = 12,
+            margin_bottom = 18
         };
         content.add (new Granite.HeaderLabel (_("Tag Names")));
         content.add (grid);
