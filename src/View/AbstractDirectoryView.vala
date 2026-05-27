@@ -1904,6 +1904,57 @@ namespace Files {
 
 
 
+        private void append_tags_menu (Gtk.Menu menu, GLib.List<Files.File> selection) {
+            var tags_item = new Gtk.MenuItem.with_label (_("Tags"));
+            var submenu = new Gtk.Menu ();
+
+            foreach (unowned string key in Files.TagManager.all_keys ()) {
+                bool all_have = true;
+                foreach (unowned Files.File f in selection) {
+                    if (!f.has_tag (key)) {
+                        all_have = false;
+                        break;
+                    }
+                }
+
+                var item = new Gtk.CheckMenuItem.with_label (Files.TagManager.display_name (key));
+                item.active = all_have;
+                var captured_key = key;
+                item.toggled.connect (() => {
+                    foreach (unowned Files.File f in selection) {
+                        string[] updated = {};
+                        if (item.active) {
+                            updated = f.tags;
+                            if (!(captured_key in updated)) {
+                                updated += captured_key;
+                            }
+                        } else {
+                            foreach (unowned string t in f.tags) {
+                                if (t != captured_key) {
+                                    updated += t;
+                                }
+                            }
+                        }
+                        f.set_tags (updated);
+                    }
+                });
+                submenu.add (item);
+            }
+
+            submenu.add (new Gtk.SeparatorMenuItem ());
+            var clear_item = new Gtk.MenuItem.with_label (_("Clear Tags"));
+            clear_item.activate.connect (() => {
+                foreach (unowned Files.File f in selection) {
+                    f.set_tags (new string[0]);
+                }
+            });
+            submenu.add (clear_item);
+
+            tags_item.submenu = submenu;
+            tags_item.show_all ();
+            menu.add (tags_item);
+        }
+
         protected void show_context_menu (Gdk.Event event) requires (window != null) {
             /* select selection or background context menu */
             update_menu_actions ();
@@ -2253,6 +2304,8 @@ namespace Files {
                         menu.add (bookmark_menuitem);
                     }
 
+                    menu.add (new Gtk.SeparatorMenuItem ());
+                    append_tags_menu (menu, selected_files);
                     menu.add (new Gtk.SeparatorMenuItem ());
                     menu.add (properties_menuitem);
                 }
