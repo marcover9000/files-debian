@@ -355,6 +355,10 @@ namespace Files.View {
         }
 
        private void update_tab_name () {
+            if (this.uri.has_prefix ("tag://")) {
+                this.tab_name = Files.ColorTags.display_name (int.parse (this.uri.substring ("tag://".length)));
+                return;
+            }
             var tab_name = Files.INVALID_TAB_NAME;
 
             string protocol, path;

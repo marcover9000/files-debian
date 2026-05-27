@@ -89,6 +89,8 @@ namespace Files {
         switch (s) {
             case "recent":
                 return _(Files.PROTOCOL_NAME_RECENT);
+            case "tag":
+                return _("Tags");
             case "trash":
                 return _(Files.PROTOCOL_NAME_TRASH);
             case "network":
