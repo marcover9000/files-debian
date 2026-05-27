@@ -44,11 +44,18 @@ public class Files.Plugins.ContractMenuItem : Gtk.MenuItem {
 public class Files.Plugins.Contractor : Files.Plugins.Base {
     private Gtk.Menu menu;
     private Files.File current_directory = null;
+    /* Contractor is an elementary-only service; on other distros it is absent.
+     * Disable after the first failure instead of warning on every menu. */
+    private static bool contractor_available = true;
 
     public Contractor () {
     }
 
     public override void context_menu (Gtk.Widget widget, List<Files.File> gof_files) {
+        if (!contractor_available) {
+            return;
+        }
+
         menu = widget as Gtk.Menu;
 
         GLib.File[] files = null;
@@ -98,7 +105,8 @@ public class Files.Plugins.Contractor : Files.Plugins.Base {
                 add_menuitem (menu, menu_item);
             }
         } catch (Error e) {
-            warning (e.message);
+            contractor_available = false;
+            debug ("Contractor unavailable, disabling its menu integration: %s", e.message);
         }
     }
 

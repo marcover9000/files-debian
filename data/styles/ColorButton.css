@@ -1,7 +1,26 @@
+.color-button check {
+    min-height: 14px;
+    min-width: 14px;
+    border-radius: 50%;
+    box-shadow: none;
+    -gtk-icon-source: none;
+}
+
 .color-button.none check {
     background: @base_color;
     color: mix(@text_color, @base_color, 0.5);
-    min-height: 14px;
-    min-width: 14px;
     -gtk-icon-source: -gtk-icontheme("close-symbolic");
 }
+
+/* Tag colours (match Files.Preferences.TAGS_COLORS). Defined here so the swatches
+ * show their colour even without the elementary GTK stylesheet installed. */
+.color-button.blue check { background: #64baff; }
+.color-button.mint check { background: #43d6b5; }
+.color-button.green check { background: #9bdb4d; }
+.color-button.yellow check { background: #ffe16b; }
+.color-button.orange check { background: #ffc27d; }
+.color-button.red check { background: #ff8c82; }
+.color-button.pink check { background: #f4679d; }
+.color-button.purple check { background: #cd9ef7; }
+.color-button.brown check { background: #a3907c; }
+.color-button.slate check { background: #95a3ab; }
