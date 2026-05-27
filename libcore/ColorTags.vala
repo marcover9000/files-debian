@@ -48,6 +48,10 @@ namespace Files {
             get_settings ().set_strv ("tag-names", arr);
         }
 
+        public static bool show_as_dot () {
+            return get_settings ().get_boolean ("color-tag-as-dot");
+        }
+
         public static string display_name (int color) {
             if (color < 1 || color > 10) {
                 return "";
