@@ -46,7 +46,8 @@ public class Files.View.Window : Hdy.ApplicationWindow {
         {"restore-tabs-on-startup", null, null, "true", change_state_restore_tabs_on_startup},
         {"forward", action_forward, "i"},
         {"back", action_back, "i"},
-        {"focus-sidebar", action_focus_sidebar}
+        {"focus-sidebar", action_focus_sidebar},
+        {"edit-tag-names", action_edit_tag_names}
     };
 
     public uint window_number { get; construct; }
@@ -837,6 +838,11 @@ public class Files.View.Window : Hdy.ApplicationWindow {
 
     private void action_edit_path () {
         location_bar.enter_navigate_mode ();
+    }
+
+    private void action_edit_tag_names () {
+        var dialog = new TagNamesDialog (this);
+        dialog.present ();
     }
 
     private void action_bookmark (GLib.SimpleAction action, GLib.Variant? param) {

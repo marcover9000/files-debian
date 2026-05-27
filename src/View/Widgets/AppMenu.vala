@@ -142,6 +142,14 @@ public class Files.AppMenu : Gtk.Popover {
         menu_box.add (locale_button);
         menu_box.add (informal_button);
 
+        var tag_names_button = new Gtk.ModelButton () {
+            text = _("Tag Names…")
+        };
+        tag_names_button.action_name = "win.edit-tag-names";
+
+        menu_box.add (new Gtk.Separator (HORIZONTAL) { margin_top = 3, margin_bottom = 3 });
+        menu_box.add (tag_names_button);
+
         menu_box.show_all ();
 
         child = menu_box;
