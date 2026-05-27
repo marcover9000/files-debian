@@ -92,6 +92,7 @@ public class Files.Directory : Object {
     public bool is_trash {get; private set;}
     public bool is_network {get; private set;}
     public bool is_recent {get; private set;}
+    public bool is_tag {get; private set;}
     public bool is_admin {get; private set;}
     public bool is_no_info {get; private set;}
     public bool has_mounts {get; private set;}
@@ -177,11 +178,12 @@ public class Files.Directory : Object {
         scheme = location.get_uri_scheme ();
         is_trash = FileUtils.location_is_in_trash (location);
         is_recent = (scheme == "recent");
+        is_tag = (scheme == "tag");
         is_admin = (scheme == "admin");
         //Try lifting requirement for info on remote connections
         //TODO Not sure whether the afc protocol (i-phone) is appropriate here. Safer to assume it is.
         is_no_info = ("cdda mtp gphoto2 ssh sftp afp afc dav davs".contains (scheme));
-        is_local = is_trash || is_recent || (scheme == "file");
+        is_local = is_trash || is_recent || is_tag || (scheme == "file");
         is_network = !is_local && ("smb ftp sftp afp dav davs".contains (scheme));
         /* Previously, mtp protocol had problems launching files but this currently works
          * using newer devices such as Android phones so this restriction is lifted. The flag is
@@ -248,6 +250,18 @@ public class Files.Directory : Object {
      */
     private async void prepare_directory (FileLoadedFunc? file_loaded_func, DoneLoadingFunc? done_loading_func) {
         debug ("Preparing directory for loading");
+        if (is_tag) {
+            /* tag:// is not a real GIO location; give it a synthetic folder identity
+             * and go straight to ready so the recursive scan can run. */
+            var tag_info = new GLib.FileInfo ();
+            tag_info.set_file_type (GLib.FileType.DIRECTORY);
+            tag_info.set_name ("tag");
+            tag_info.set_attribute_boolean (GLib.FileAttribute.STANDARD_IS_HIDDEN, false);
+            file.info = tag_info;
+            file.update ();
+            yield make_ready (true, file_loaded_func, done_loading_func);
+            return;
+        }
         /* Force info to be refreshed - the Files.File may have been created already by another part of the program
          * that did not ensure the correct info Aync purposes, and retrieved from cache (bug 1511307).
          */
@@ -675,6 +689,11 @@ public class Files.Directory : Object {
             return;
         }
 
+        if (is_tag) {
+            yield list_tag_async (file_loaded_func, done_loading_func);
+            return;
+        }
+
         if (!can_load) {
             critical ("load called when cannot load - not expected to happen");
             return;
@@ -766,6 +785,67 @@ public class Files.Directory : Object {
             loaded_from_cache = false;
             after_loading (done_loading_func);
         }
+    }
+
+    private async void list_tag_async (FileLoadedFunc? file_loaded_func, DoneLoadingFunc? done_loading_func) {
+        cancellable = new Cancellable ();
+        displayed_files_count = 0;
+        state = State.LOADING;
+
+        int target_color = int.parse (location.get_uri ().substring ("tag://".length));
+        bool show_hidden = Preferences.get_default ().show_hidden_files;
+        const string ATTRS = "standard::name,standard::type,standard::is-hidden,standard::is-symlink," +
+                             "standard::content-type,standard::size,time::*,metadata::color-tag";
+
+        var queue = new GLib.Queue<GLib.File> ();
+        queue.push_tail (GLib.File.new_for_path (GLib.Environment.get_home_dir ()));
+
+        while (!cancellable.is_cancelled ()) {
+            var dir = queue.pop_head ();
+            if (dir == null) {
+                break;
+            }
+
+            try {
+                var e = yield dir.enumerate_children_async (ATTRS, GLib.FileQueryInfoFlags.NOFOLLOW_SYMLINKS, Priority.LOW, cancellable);
+                while (!cancellable.is_cancelled ()) {
+                    var infos = yield e.next_files_async (200, Priority.LOW, cancellable);
+                    if (infos == null) {
+                        break;
+                    }
+                    foreach (unowned var info in infos) {
+                        var child = dir.get_child (info.get_name ());
+                        if (info.get_file_type () == GLib.FileType.DIRECTORY) {
+                            if (!info.get_is_symlink () && (show_hidden || !info.get_is_hidden ())) {
+                                queue.push_tail (child);
+                            }
+                            continue;
+                        }
+
+                        if (info.has_attribute ("metadata::color-tag") &&
+                            int.parse (info.get_attribute_string ("metadata::color-tag")) == target_color) {
+
+                            var gof = Files.File.@get (child);
+                            gof.info = info;
+                            gof.update ();
+                            file_hash.insert (gof.location, gof);
+                            after_load_file (gof, show_hidden, file_loaded_func);
+                        }
+                    }
+                }
+            } catch (Error err) {
+                debug ("tag scan: skipping %s: %s", dir.get_uri (), err.message);
+            }
+        }
+
+        if (!cancellable.is_cancelled ()) {
+            state = State.LOADED;
+            if (displayed_files_count == 0) {
+                ColorTags.unmark_used (target_color);
+            }
+        }
+
+        after_loading (done_loading_func);
     }
 
     private void after_load_file (Files.File gof, bool show_hidden, FileLoadedFunc? file_loaded_func) {
