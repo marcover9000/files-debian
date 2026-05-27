@@ -34,6 +34,8 @@ namespace Files.View {
         public unowned View.Slot? current_slot;
         public GLib.List<View.Slot> slot_list = null;
         public int total_width = 0;
+        private View.PreviewColumn? preview_column = null;
+        private int preview_width = 0;
 
         public override bool is_frozen {
             set {
@@ -92,6 +94,7 @@ namespace Files.View {
 
         /** Creates a new slot in the host slot hpane */
         public void add_location (GLib.File loc, View.Slot? host = null) {
+            remove_preview ();
             var guest = new View.Slot (loc, ctab, ViewMode.MILLER_COLUMNS);
             /* Notify view container of path change - will set tab to working and change pathbar */
             path_changed ();
@@ -153,6 +156,10 @@ namespace Files.View {
             slot_list.@foreach ((slot) => {
                 total_width += slot.width;
             });
+
+            if (preview_column != null) {
+                total_width += preview_width;
+            }
         }
 
         private uint total_width_timeout_id = 0;
@@ -426,6 +433,53 @@ namespace Files.View {
 
         private void on_slot_selection_changed (GLib.List<Files.File> files) {
             selection_changed (files);
+            update_preview (files);
+        }
+
+        private void update_preview (GLib.List<Files.File> files) {
+            remove_preview ();
+
+            unowned View.Slot? last = (slot_list != null && slot_list.last () != null)
+                                          ? slot_list.last ().data : null;
+
+            /* Only for a single, non-folder file selected in the last column. */
+            if (last != null && current_slot == last &&
+                files != null && files.data != null && files.next == null &&
+                !files.data.is_folder ()) {
+
+                preview_column = new View.PreviewColumn () {
+                    hexpand = true
+                };
+                preview_column.set_file (files.data);
+                preview_width = last.width;
+                preview_column.set_size_request (preview_width, -1);
+                preview_column.show_all ();
+                last.colpane.add (preview_column);
+                update_total_width ();
+                scroll_to_preview ();
+            }
+        }
+
+        private void remove_preview () {
+            if (preview_column != null) {
+                if (preview_column.parent != null) {
+                    ((Gtk.Container) preview_column.parent).remove (preview_column);
+                }
+                preview_column.destroy ();
+                preview_column = null;
+                preview_width = 0;
+                update_total_width ();
+            }
+        }
+
+        private void scroll_to_preview () {
+            GLib.Timeout.add (250, () => {
+                if (!scrolled_window.get_realized ()) {
+                    return Source.CONTINUE;
+                }
+                smooth_adjustment_to (this.hadj, (int) hadj.upper);
+                return Source.REMOVE;
+            });
         }
 
         private void on_slot_frozen_changed (Slot slot, bool frozen) {
