@@ -99,6 +99,9 @@ public class Files.Plugins.CTags : Files.Plugins.Base {
                 target_file.color = n;
                 target_file.location.set_attribute_string ("metadata::color-tag", n.to_string (), FileQueryInfoFlags.NONE);
                 target_file.icon_changed ();
+                if (n >= 1) {
+                    Files.ColorTags.mark_used (n);
+                }
             }
         }
 
