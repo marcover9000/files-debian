@@ -126,6 +126,16 @@
       <summary>Show colour tags as a dot instead of a name background</summary>
       <description>When true, a file's colour tag is drawn as a coloured dot on its icon; when false, as a background behind the file name.</description>
     </key>
+    <key type="ai" name="used-tag-colors">
+      <default>[]</default>
+      <summary>Colour tag indices currently in use</summary>
+      <description>Colour indices (1-10) that have at least one tagged file, shown in the sidebar Tags section.</description>
+    </key>
+    <key type="b" name="sidebar-cat-tags-expander">
+      <default>true</default>
+      <summary>Tags sidebar category expander state</summary>
+      <description>Whether the Tags section of the sidebar is expanded.</description>
+    </key>
   </schema>
 
   <schema path="/io/elementary/files/icon-view/" id="io.elementary.files.icon-view">
