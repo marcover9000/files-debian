@@ -40,6 +40,7 @@ namespace Files.View {
 
                 _window = value;
                 _window.folder_deleted.connect (on_folder_deleted);
+                _window.free_space_change.connect (on_free_space_change);
                 _window.connect_content_signals (this);
                 _window.loading_uri (slot.location.get_uri ());
                 load_directory ();
@@ -167,6 +168,7 @@ namespace Files.View {
         private void disconnect_window_signals () {
             if (window != null) {
                 window.folder_deleted.disconnect (on_folder_deleted);
+                window.free_space_change.disconnect (on_free_space_change);
                 window.disconnect_content_signals (this);
             }
         }
@@ -175,6 +177,13 @@ namespace Files.View {
             if (deleted.equal (this.location) && !go_up ()) {
                 close ();
                 window.remove_content (this);
+            }
+        }
+
+        private void on_free_space_change () {
+            /* Refresh the idle summary only when nothing is selected. */
+            if (slot != null && slot.get_selected_files () == null) {
+                overlay_statusbar.show_folder_summary (((View.Slot) slot).displayed_files_count, location);
             }
         }
 
@@ -437,6 +446,10 @@ namespace Files.View {
                 content = view.get_content_box ();
                 var directory = dir.file;
 
+                if (selected_locations == null && dir.selected_file == null) {
+                    overlay_statusbar.show_folder_summary (((View.Slot) slot).displayed_files_count, dir.file.location);
+                }
+
                 /* Only record valid folders (will also log Zeitgeist event) */
                 browser.record_uri (directory.uri); /* will ignore null changes i.e reloading*/
 
@@ -595,7 +608,13 @@ namespace Files.View {
         }
 
         private void on_slot_selection_changed (GLib.List<unowned Files.File> files) {
-            overlay_statusbar.selection_changed (files);
+            if (files == null) {
+                if (slot != null) {
+                    overlay_statusbar.show_folder_summary (((View.Slot) slot).displayed_files_count, location);
+                }
+            } else {
+                overlay_statusbar.selection_changed (files);
+            }
         }
 
         private void on_button_pressed_event (int n_press, double x, double y) {
