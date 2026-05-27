@@ -24,6 +24,7 @@ pantheon_files_exec = executable (
     'ZeitgeistManager.vala',
 
     'Dialogs/AbstractPropertiesDialog.vala',
+    'Dialogs/TagNamesDialog.vala',
     'Dialogs/ChooseAppDialog.vala',
     'Dialogs/PropertiesWindow.vala',
     'Dialogs/VolumePropertiesWindow.vala',
