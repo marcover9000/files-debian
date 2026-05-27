@@ -35,8 +35,7 @@ public class Files.File : GLib.Object {
         "standard::is-hidden,standard::is-backup,standard::is-symlink,standard::type,standard::name," +
         "standard::display-name,standard::content-type,standard::fast-content-type,standard::size," +
         "standard::symlink-target,standard::target-uri,access::*,time::*,owner::*,trash::*,unix::*,id::filesystem," +
-        "thumbnail::*,mountable::*,metadata::marlin-sort-column-id,metadata::marlin-sort-reversed," +
-        "metadata::files-tags";
+        "thumbnail::*,mountable::*,metadata::marlin-sort-column-id,metadata::marlin-sort-reversed";
 
     public signal void changed ();
     public signal void icon_changed ();
@@ -53,7 +52,6 @@ public class Files.File : GLib.Object {
     public GLib.Icon? icon = null;
     public GLib.List<string>? emblems_list = null;
     public uint n_emblems = 0;
-    public string[] tags = {};
     public GLib.FileInfo? info = null;
     public string basename { get; construct; }
     public string? custom_display_name = null;
@@ -565,12 +563,6 @@ public class Files.File : GLib.Object {
                 sort_order = info.get_attribute_string ("metadata::marlin-sort-reversed") == "true" ?
                                                         Gtk.SortType.DESCENDING : Gtk.SortType.ASCENDING;
             }
-        }
-
-        if (info.has_attribute ("metadata::files-tags")) {
-            tags = parse_tags (info.get_attribute_string ("metadata::files-tags"));
-        } else {
-            tags = {};
         }
 
         if (info.has_attribute (GLib.FileAttribute.STANDARD_ICON)) {
@@ -1123,54 +1115,6 @@ public class Files.File : GLib.Object {
                 add_emblem ("emblem-unreadable");
             }
         }
-
-        foreach (unowned string tag in tags) {
-            add_emblem ("tag:" + tag);
-        }
-    }
-
-    private static string[] parse_tags (string? csv) {
-        string[] result = {};
-        if (csv == null || csv == "") {
-            return result;
-        }
-        foreach (unowned string part in csv.split (",")) {
-            var key = part.strip ();
-            if (key != "" && TagManager.is_valid (key) && !(key in result)) {
-                result += key;
-            }
-        }
-        return result;
-    }
-
-    public bool has_tag (string key) {
-        foreach (unowned string t in tags) {
-            if (t == key) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public void set_tags (string[] keys) {
-        tags = keys;
-
-        var ginfo = new GLib.FileInfo ();
-        ginfo.set_attribute_string ("metadata::files-tags", string.joinv (",", keys));
-        location.set_attributes_async.begin (
-            ginfo, GLib.FileQueryInfoFlags.NONE, GLib.Priority.DEFAULT, null,
-            (obj, res) => {
-                try {
-                    GLib.FileInfo unused;
-                    location.set_attributes_async.end (res, out unused);
-                } catch (Error e) {
-                    warning ("Could not write tags for %s: %s", basename, e.message);
-                }
-            }
-        );
-
-        update_emblem ();
-        icon_changed (); // force redraw even when no emblems remain
     }
 
     public void add_emblem (string emblem) {
