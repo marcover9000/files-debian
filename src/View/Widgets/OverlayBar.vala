@@ -46,8 +46,7 @@ namespace Files.View {
         construct {
             buffer = new uint8[IMAGE_LOADER_BUFFER_SIZE];
             label = "";
-            hexpand = true;
-            halign = Gtk.Align.FILL;
+            halign = Gtk.Align.END; /* Keep elementary's compact pill anchored bottom-right. */
             get_style_context ().add_class ("files-statusbar");
             hide.connect (cancel);
             show_all ();

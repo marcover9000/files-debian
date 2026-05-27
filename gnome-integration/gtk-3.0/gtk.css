@@ -279,13 +279,7 @@ iconview:selected,
     color: @theme_fg_color;
 }
 
-/* Finder-style status bar (always visible, docked at the bottom) */
-.files-statusbar {
-    border-top: 1px solid alpha(currentColor, 0.12);
-    padding: 2px 8px;
-    min-height: 22px;
-    font-size: 0.85em;
-}
+/* Status bar: keep elementary's compact pill, just give the text a little room */
 .files-statusbar label {
-    opacity: 0.85;
+    padding: 1px 6px;
 }
