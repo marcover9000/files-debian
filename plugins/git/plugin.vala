@@ -87,8 +87,8 @@ public class Files.Plugins.Git : Files.Plugins.Base {
     }
 
     public override void directory_loaded (Gtk.ApplicationWindow window, Files.AbstractSlot view, Files.File directory) {
-        if (!view.directory.is_local) {
-            debug ("Git plugin ignoring non-local folder");
+        if (!view.directory.is_local || view.directory.is_tag) {
+            debug ("Git plugin ignoring non-local/virtual folder");
             return;
         }
 

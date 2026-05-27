@@ -958,7 +958,7 @@ public class Files.File : GLib.Object {
             try {
                 return target_location.query_default_handler ();
             } catch (GLib.Error e) {
-                GLib.critical (e.message);
+                debug (e.message); // virtual/remote locations have no default handler
                 return null;
             }
         }
@@ -966,7 +966,7 @@ public class Files.File : GLib.Object {
         try {
             return location.query_default_handler ();
         } catch (GLib.Error e) {
-            GLib.critical (e.message);
+            debug (e.message); // virtual/remote locations have no default handler
             return null;
         }
     }
