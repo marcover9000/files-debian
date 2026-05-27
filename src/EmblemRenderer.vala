@@ -52,17 +52,26 @@ public class Files.EmblemRenderer : Gtk.CellRenderer {
 
         foreach (string emblem in file.emblems_list) {
             Gdk.Pixbuf? pix = null;
-            var key = emblem + "-symbolic";
 
-            if (emblem_pixbuf_map.has_key (key)) {
-                pix = emblem_pixbuf_map.@get (key);
-            } else {
-                pix = render_icon (key, style_context);
+            if (emblem.has_prefix ("tag:")) {
+                pix = Files.TagManager.dot_pixbuf (
+                    emblem.substring (4), (int) Files.IconSize.EMBLEM, icon_scale
+                );
                 if (pix == null) {
                     continue;
                 }
+            } else {
+                var key = emblem + "-symbolic";
+                if (emblem_pixbuf_map.has_key (key)) {
+                    pix = emblem_pixbuf_map.@get (key);
+                } else {
+                    pix = render_icon (key, style_context);
+                    if (pix == null) {
+                        continue;
+                    }
 
-                emblem_pixbuf_map.@set (key, pix);
+                    emblem_pixbuf_map.@set (key, pix);
+                }
             }
 
             emblem_area.y = cell_area.y + (cell_area.height - Files.IconSize.EMBLEM) / 2;
