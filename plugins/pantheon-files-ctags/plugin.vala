@@ -143,7 +143,6 @@ public class Files.Plugins.CTags : Files.Plugins.Base {
 
         construct {
             color_button_remove = new ColorButton ("none");
-            color_button_remove.tooltip_text = _("Remove colour");
             color_buttons = new Gee.ArrayList<ColorButton> ();
             color_buttons.add (new ColorButton ("blue"));
             color_buttons.add (new ColorButton ("mint"));
@@ -165,7 +164,6 @@ public class Files.Plugins.CTags : Files.Plugins.Base {
             colorbox.add (color_button_remove);
 
             for (int i = 0; i < color_buttons.size; i++) {
-                color_buttons[i].tooltip_text = Files.ColorTags.display_name (i + 1);
                 colorbox.add (color_buttons[i]);
             }
 
@@ -189,6 +187,25 @@ public class Files.Plugins.CTags : Files.Plugins.Base {
             // The menu item swallows clicks on its children, so dispatch them ourselves
             // by hit-testing the actual button allocations (robust to spacing/theme).
             button_press_event.connect (button_pressed_cb);
+
+            // Child tooltips don't fire inside a MenuItem either, so resolve the
+            // hovered swatch ourselves and show its tag name.
+            has_tooltip = true;
+            query_tooltip.connect (on_query_tooltip);
+        }
+
+        private bool on_query_tooltip (int x, int y, bool keyboard, Gtk.Tooltip tooltip) {
+            if (widget_hit (color_button_remove, x, y)) {
+                tooltip.set_text (_("Remove colour"));
+                return true;
+            }
+            for (int i = 0; i < color_buttons.size; i++) {
+                if (widget_hit (color_buttons[i], x, y)) {
+                    tooltip.set_text (Files.ColorTags.display_name (i + 1));
+                    return true;
+                }
+            }
+            return false;
         }
 
         private void clear_checks () {

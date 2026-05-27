@@ -18,8 +18,7 @@ public class Files.View.TagNamesDialog : Granite.Dialog {
 
         var grid = new Gtk.Grid () {
             column_spacing = 12,
-            row_spacing = 6,
-            margin = 12
+            row_spacing = 6
         };
 
         var names = Files.ColorTags.get_names ();
@@ -43,14 +42,26 @@ public class Files.View.TagNamesDialog : Granite.Dialog {
             grid.attach (entry, 1, i);
         }
 
-        get_content_area ().add (grid);
-        add_button (_("Done"), Gtk.ResponseType.CLOSE);
+        var content = new Gtk.Box (Gtk.Orientation.VERTICAL, 6) {
+            margin = 12
+        };
+        content.add (new Granite.HeaderLabel (_("Tag Names")));
+        content.add (grid);
 
-        response.connect (() => {
-            save ();
+        get_content_area ().add (content);
+
+        add_button (_("Cancel"), Gtk.ResponseType.CANCEL);
+        var done_button = (Gtk.Button) add_button (_("Done"), Gtk.ResponseType.OK);
+        done_button.get_style_context ().add_class (Gtk.STYLE_CLASS_SUGGESTED_ACTION);
+
+        response.connect ((id) => {
+            if (id == Gtk.ResponseType.OK) {
+                save ();
+            }
             destroy ();
         });
 
+        resizable = false;
         show_all ();
     }
 
