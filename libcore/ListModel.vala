@@ -175,13 +175,14 @@ public class Files.ListModel : Gtk.TreeStore, Gtk.TreeModel {
             case ColumnID.COLOR:
                 value = Value (typeof (string));
                 if (
+                    !Files.ColorTags.show_as_dot () &&
                     file != null &&
                     file.color >= 0 &&
                     file.color < Files.Preferences.TAGS_COLORS.length
                 ) {
                     value.set_string (Files.Preferences.TAGS_COLORS[file.color]);
                 } else {
-                    value.set_string (Files.Preferences.TAGS_COLORS[0]);
+                    value.set_string (Files.Preferences.TAGS_COLORS[0]); // null → no background
                 }
 
                 break;
