@@ -547,7 +547,7 @@ public class Files.Directory : Object {
 
         set_confirm_trash ();
 
-        if (file_loaded_func == null && is_local) {
+        if (file_loaded_func == null && is_local && !is_tag) {
             try {
                 monitor = location.monitor_directory (0);
                 monitor.rate_limit = 100;
@@ -796,6 +796,8 @@ public class Files.Directory : Object {
         bool show_hidden = Preferences.get_default ().show_hidden_files;
         const string ATTRS = "standard::name,standard::type,standard::is-hidden,standard::is-symlink," +
                              "standard::content-type,standard::size,time::*,metadata::color-tag";
+        /* Skip heavyweight noise dirs that never hold user-tagged files */
+        const string[] SKIP_DIRS = { ".cache", ".git", "node_modules", ".var", "snap" };
 
         var queue = new GLib.Queue<GLib.File> ();
         queue.push_tail (GLib.File.new_for_path (GLib.Environment.get_home_dir ()));
@@ -816,7 +818,8 @@ public class Files.Directory : Object {
                     foreach (unowned var info in infos) {
                         var child = dir.get_child (info.get_name ());
                         if (info.get_file_type () == GLib.FileType.DIRECTORY) {
-                            if (!info.get_is_symlink () && (show_hidden || !info.get_is_hidden ())) {
+                            if (!info.get_is_symlink () && (show_hidden || !info.get_is_hidden ()) &&
+                                !(info.get_name () in SKIP_DIRS)) {
                                 queue.push_tail (child);
                             }
                             continue;
@@ -840,7 +843,9 @@ public class Files.Directory : Object {
 
         if (!cancellable.is_cancelled ()) {
             state = State.LOADED;
-            if (displayed_files_count == 0) {
+            /* Use file_hash (actual matches) not displayed_files_count, which excludes
+             * hidden files when "show hidden" is off. */
+            if (file_hash.size () == 0) {
                 ColorTags.unmark_used (target_color);
             }
         }
