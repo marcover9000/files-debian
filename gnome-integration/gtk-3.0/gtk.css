@@ -278,3 +278,14 @@ iconview:selected,
     background-color: alpha(#3584e4, 0.25);
     color: @theme_fg_color;
 }
+
+/* Finder-style status bar (always visible, docked at the bottom) */
+.files-statusbar {
+    border-top: 1px solid alpha(currentColor, 0.12);
+    padding: 2px 8px;
+    min-height: 22px;
+    font-size: 0.85em;
+}
+.files-statusbar label {
+    opacity: 0.85;
+}
