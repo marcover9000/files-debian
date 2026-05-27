@@ -71,6 +71,7 @@ pantheon_files_exec = executable (
     'View/Sidebar/DriveRow.vala',
     'View/Sidebar/NetworkListBox.vala',
     'View/Sidebar/NetworkRow.vala',
+    'View/Sidebar/TagListBox.vala',
     'View/Sidebar/SidebarWindow.vala',
     'View/Sidebar/VolumeRow.vala',
     'View/Sidebar/VolumelessMountRow.vala',

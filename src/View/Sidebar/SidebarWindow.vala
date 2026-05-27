@@ -11,6 +11,9 @@ public class Sidebar.SidebarWindow : Gtk.Box, Files.SidebarInterface {
     private BookmarkListBox bookmark_listbox;
     private DeviceListBox device_listbox;
     private NetworkListBox network_listbox;
+    private TagListBox tag_listbox;
+    private SidebarExpander tags_expander;
+    private Gtk.Revealer tags_revealer;
 
     private string selected_uri = "";
     private bool loading = false;
@@ -26,6 +29,7 @@ public class Sidebar.SidebarWindow : Gtk.Box, Files.SidebarInterface {
         bookmark_listbox = new BookmarkListBox (this);
         device_listbox = new DeviceListBox (this);
         network_listbox = new NetworkListBox (this);
+        tag_listbox = new TagListBox (this);
 
         var bookmark_expander = new SidebarExpander (_("Bookmarks")) {
             tooltip_text = _("Common places plus saved folders and files")
@@ -53,6 +57,14 @@ public class Sidebar.SidebarWindow : Gtk.Box, Files.SidebarInterface {
             child = network_listbox
         };
 
+        tags_expander = new SidebarExpander (_("Tags")) {
+            tooltip_text = _("Files grouped by colour tag")
+        };
+
+        tags_revealer = new Gtk.Revealer () {
+            child = tag_listbox
+        };
+
         var bookmarklists_box = new Gtk.Box (VERTICAL, 0) {
             vexpand = true
         };
@@ -62,6 +74,8 @@ public class Sidebar.SidebarWindow : Gtk.Box, Files.SidebarInterface {
         bookmarklists_box.add (device_revealer);
         bookmarklists_box.add (network_expander);
         bookmarklists_box.add (network_revealer);
+        bookmarklists_box.add (tags_expander);
+        bookmarklists_box.add (tags_revealer);
 
         scrolled_window = new Gtk.ScrolledWindow (null, null) {
             child = bookmarklists_box,
@@ -115,6 +129,25 @@ public class Sidebar.SidebarWindow : Gtk.Box, Files.SidebarInterface {
         bookmark_expander.bind_property ("active", bookmark_revealer, "reveal-child", GLib.BindingFlags.SYNC_CREATE);
         device_expander.bind_property ("active", device_revealer, "reveal-child", GLib.BindingFlags.SYNC_CREATE);
         network_expander.bind_property ("active", network_revealer, "reveal-child", GLib.BindingFlags.SYNC_CREATE);
+
+        Files.app_settings.bind (
+            "sidebar-cat-tags-expander", tags_expander, "active", SettingsBindFlags.DEFAULT
+        );
+        tags_expander.bind_property ("active", tags_revealer, "reveal-child", GLib.BindingFlags.SYNC_CREATE);
+
+        update_tags_visibility ();
+        Files.app_settings.changed["used-tag-colors"].connect (() => {
+            tag_listbox.refresh ();
+            update_tags_visibility ();
+        });
+    }
+
+    private void update_tags_visibility () {
+        bool any = Files.ColorTags.used_colors ().length > 0;
+        tags_expander.no_show_all = !any;
+        tags_expander.visible = any;
+        tags_revealer.no_show_all = !any;
+        tags_revealer.visible = any;
     }
 
     private void refresh (bool bookmarks = true, bool devices = true, bool network = true) {
