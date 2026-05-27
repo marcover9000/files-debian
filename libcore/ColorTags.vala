@@ -48,6 +48,48 @@ namespace Files {
             get_settings ().set_strv ("tag-names", arr);
         }
 
+        public static int[] used_colors () {
+            var v = get_settings ().get_value ("used-tag-colors");
+            int[] result = {};
+            for (int i = 0; i < (int) v.n_children (); i++) {
+                result += v.get_child_value (i).get_int32 ();
+            }
+            return result;
+        }
+
+        public static void mark_used (int color) {
+            if (color < 1 || color > 10) {
+                return;
+            }
+            var current = used_colors ();
+            foreach (int c in current) {
+                if (c == color) {
+                    return; // already listed
+                }
+            }
+            current += color;
+            get_settings ().set_value ("used-tag-colors", new GLib.Variant.array (new GLib.VariantType ("i"), variant_ints (current)));
+        }
+
+        public static void unmark_used (int color) {
+            var current = used_colors ();
+            int[] result = {};
+            foreach (int c in current) {
+                if (c != color) {
+                    result += c;
+                }
+            }
+            get_settings ().set_value ("used-tag-colors", new GLib.Variant.array (new GLib.VariantType ("i"), variant_ints (result)));
+        }
+
+        private static GLib.Variant[] variant_ints (int[] values) {
+            GLib.Variant[] arr = {};
+            foreach (int v in values) {
+                arr += new GLib.Variant.int32 (v);
+            }
+            return arr;
+        }
+
         public static bool show_as_dot () {
             return get_settings ().get_boolean ("color-tag-as-dot");
         }
