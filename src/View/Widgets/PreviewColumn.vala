@@ -316,38 +316,6 @@ namespace Files.View {
             }
             add_info_row (ref row, _("Modified"), file.get_formated_time (GLib.FileAttribute.TIME_MODIFIED));
 
-            if (file.tags.length > 0) {
-                var tags_key = new Gtk.Label (_("Tags")) {
-                    halign = Gtk.Align.END,
-                    xalign = 1
-                };
-                tags_key.get_style_context ().add_class ("dim-label");
-
-                var tags_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 4) {
-                    halign = Gtk.Align.START
-                };
-                var scale = get_scale_factor ();
-                foreach (unowned string key in file.tags) {
-                    var dot = Files.TagManager.dot_pixbuf (key, 12, scale);
-                    if (dot != null) {
-                        tags_box.add (new Gtk.Image.from_surface (
-                            Gdk.cairo_surface_create_from_pixbuf (dot, scale, null)
-                        ));
-                    }
-                }
-                var names = new string[file.tags.length];
-                for (int i = 0; i < file.tags.length; i++) {
-                    names[i] = Files.TagManager.display_name (file.tags[i]);
-                }
-                tags_box.add (new Gtk.Label (string.joinv (", ", names)) {
-                    xalign = 0
-                });
-
-                info_grid.attach (tags_key, 0, row, 1, 1);
-                info_grid.attach (tags_box, 1, row, 1, 1);
-                row++;
-            }
-
             info_grid.show_all ();
         }
 
