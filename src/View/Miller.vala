@@ -477,7 +477,10 @@ namespace Files.View {
                 if (!scrolled_window.get_realized ()) {
                     return Source.CONTINUE;
                 }
-                smooth_adjustment_to (this.hadj, (int) hadj.upper);
+                if (get_animating ()) {
+                    cancel_animation ();
+                }
+                hadj.set_value (hadj.upper); // instant, no animation
                 return Source.REMOVE;
             });
         }
