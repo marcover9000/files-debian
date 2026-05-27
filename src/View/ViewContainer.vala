@@ -107,6 +107,7 @@ namespace Files.View {
                 if (content_item != null) {
                     add (content_item);
                     content_item.show_all ();
+                    reorder_child (content_item, 0); /* Keep content above the docked status bar. */
                 }
             }
             get {
@@ -144,6 +145,7 @@ namespace Files.View {
         /* Initial location now set by Window.make_tab after connecting signals.
          * Window property set when tab is attached to a tab_view (See Window.vala) */
         construct {
+            orientation = Gtk.Orientation.VERTICAL;
             browser = new Browser ();
             loading.connect ((loading) => {
                 is_loading = loading;
@@ -237,9 +239,8 @@ namespace Files.View {
                 this.view = new Slot (loc, this, mode);
             }
 
-            overlay_statusbar = new View.OverlayBar (view.overlay) {
-                no_show_all = true
-            };
+            overlay_statusbar = new View.OverlayBar (null);
+            pack_end (overlay_statusbar, false, false, 0);
 
             view.active.connect (on_slot_active);
             view.path_changed.connect (on_slot_path_changed);
@@ -328,7 +329,6 @@ namespace Files.View {
 
         private void directory_is_loading (GLib.File loc) {
             overlay_statusbar.cancel ();
-            overlay_statusbar.halign = Gtk.Align.END;
             refresh_slot_info (loc);
 
             can_show_folder = false;
@@ -359,7 +359,6 @@ namespace Files.View {
             }
 
             this.tab_name = tab_name;
-            overlay_statusbar.hide ();
         }
 
 
