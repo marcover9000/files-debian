@@ -15,6 +15,7 @@ pantheon_files_core_vala_files = files(
     'Bookmark.vala',
     'BookmarkList.vala',
     'CallWhenReady.vala',
+    'ColorTags.vala',
     'ConnectServerOperation.vala',
     'ConnectServerDialog.vala',
     'Directory.vala',
