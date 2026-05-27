@@ -5,8 +5,65 @@
  */
 
 namespace Files.View {
+
+    /*
+     * Draws a pixbuf scaled to fit the space it is given (contained, centred
+     * horizontally, top-aligned). Requests a 1x1 minimum so it never forces the
+     * preview column wider than the panel — it simply fills whatever room it gets,
+     * so resizing the column rescales the content with no horizontal overflow.
+     */
+    private class PreviewImage : Gtk.DrawingArea {
+        private Gdk.Pixbuf? pixbuf = null;
+
+        public PreviewImage () {
+            hexpand = true;
+            vexpand = true;
+        }
+
+        public void set_pixbuf (Gdk.Pixbuf? pix) {
+            pixbuf = pix;
+            queue_draw ();
+        }
+
+        public override void get_preferred_width (out int minimum, out int natural) {
+            minimum = 1;
+            natural = 1;
+        }
+
+        public override void get_preferred_height (out int minimum, out int natural) {
+            minimum = 1;
+            natural = 1;
+        }
+
+        public override bool draw (Cairo.Context cr) {
+            if (pixbuf == null) {
+                return false;
+            }
+
+            int aw = get_allocated_width ();
+            int ah = get_allocated_height ();
+            if (aw < 1 || ah < 1 || pixbuf.width < 1 || pixbuf.height < 1) {
+                return false;
+            }
+
+            double s = double.min ((double) aw / pixbuf.width, (double) ah / pixbuf.height);
+            double dw = pixbuf.width * s;
+            double ox = (aw - dw) / 2.0; // centre horizontally, top-aligned
+
+            cr.save ();
+            cr.translate (ox, 0);
+            cr.scale (s, s);
+            Gdk.cairo_set_source_pixbuf (cr, pixbuf, 0, 0);
+            cr.get_source ().set_filter (Cairo.Filter.GOOD);
+            cr.paint ();
+            cr.restore ();
+            return false;
+        }
+    }
+
     public class PreviewColumn : Gtk.Box {
         private const int ICON_SIZE = 256;
+        private const int PDF_RENDER_WIDTH = 1200; // resolution the first page is rasterised at
         private const size_t MAX_TEXT_BYTES = 10 * 1024 * 1024; // 10 MB safety cap
         private const string[] TEXT_ALLOWLIST = {
             "application/json", "application/xml", "application/x-yaml",
@@ -19,11 +76,6 @@ namespace Files.View {
         private Gtk.Grid info_grid;
         private Files.File? current_file = null;
         private Cancellable? cancellable = null;
-        private Gdk.Pixbuf? source_pixbuf = null;
-        private Poppler.Document? pdf_doc = null;
-        private Poppler.Page? pdf_page = null;
-        private int rendered_width = 0;
-        private uint resize_timeout_id = 0;
 
         construct {
             orientation = Gtk.Orientation.VERTICAL;
@@ -59,8 +111,6 @@ namespace Files.View {
             add (name_label);
             add (info_grid);
             show_all ();
-
-            size_allocate.connect (on_size_allocate);
         }
 
         ~PreviewColumn () {
@@ -75,14 +125,6 @@ namespace Files.View {
             }
             cancellable = new Cancellable ();
             current_file = file;
-            source_pixbuf = null;
-            pdf_doc = null;
-            pdf_page = null;
-            rendered_width = 0;
-            if (resize_timeout_id > 0) {
-                GLib.Source.remove (resize_timeout_id);
-                resize_timeout_id = 0;
-            }
 
             clear_content ();
             if (file == null) {
@@ -124,26 +166,29 @@ namespace Files.View {
             });
         }
 
-        private int target_width () {
-            int w = get_allocated_width ();
-            return (w > 48) ? w - 24 : ICON_SIZE; // minus margins; fallback before allocation
-        }
-
-        private void show_surface (Cairo.Surface surface) {
+        /* Shows a pixbuf scaled to fit the panel (used for images and PDFs). */
+        private void show_pixbuf (Gdk.Pixbuf pix) {
             clear_content ();
-            var image = new Gtk.Image.from_surface (surface) {
-                halign = Gtk.Align.CENTER,
-                valign = Gtk.Align.START
-            };
-            content_holder.add (image);
+            var view = new PreviewImage ();
+            view.set_pixbuf (pix);
+            content_holder.add (view);
             content_holder.show_all ();
         }
 
+        /* Shows the MIME icon at its natural size, centred (the fallback). */
         private void show_icon (Files.File file) {
+            clear_content ();
             var scale = get_scale_factor ();
             var pix = file.get_icon_pixbuf (ICON_SIZE, scale);
             if (pix != null) {
-                show_surface (Gdk.cairo_surface_create_from_pixbuf (pix, scale, null));
+                var image = new Gtk.Image.from_surface (
+                    Gdk.cairo_surface_create_from_pixbuf (pix, scale, null)
+                ) {
+                    halign = Gtk.Align.CENTER,
+                    valign = Gtk.Align.START
+                };
+                content_holder.add (image);
+                content_holder.show_all ();
             }
         }
 
@@ -154,8 +199,9 @@ namespace Files.View {
                 if (cancel.is_cancelled () || current_file != file) {
                     return;
                 }
-                source_pixbuf = pix;
-                scale_and_show_pixbuf ();
+                if (pix != null) {
+                    show_pixbuf (pix);
+                }
             } catch (Error e) {
                 if (!cancel.is_cancelled () && current_file == file) {
                     show_icon (file);
@@ -163,90 +209,43 @@ namespace Files.View {
             }
         }
 
-        /* Scales the cached source image to the panel's current width and shows it. */
-        private void scale_and_show_pixbuf () {
-            if (source_pixbuf == null) {
-                return;
-            }
-            int tw = target_width ();
-            if (tw < 1 || source_pixbuf.width < 1) {
-                return;
-            }
-            var scale = get_scale_factor ();
-            int target_px = tw * scale;
-            int dh = (int) ((double) source_pixbuf.height * target_px / source_pixbuf.width);
-            if (target_px < 1 || dh < 1) {
-                return;
-            }
-            var scaled = source_pixbuf.scale_simple (target_px, dh, Gdk.InterpType.BILINEAR);
-            rendered_width = tw;
-            show_surface (Gdk.cairo_surface_create_from_pixbuf (scaled, scale, null));
-        }
-
         private void render_pdf (Files.File file) {
             try {
-                pdf_doc = new Poppler.Document.from_gfile (file.location, null, cancellable);
-                if (pdf_doc.get_n_pages () < 1) {
+                var doc = new Poppler.Document.from_gfile (file.location, null, cancellable);
+                if (doc.get_n_pages () < 1) {
                     show_icon (file);
                     return;
                 }
-                pdf_page = pdf_doc.get_page (0);
-                render_pdf_page ();
+
+                var page = doc.get_page (0);
+                double pw, ph;
+                page.get_size (out pw, out ph);
+
+                double factor = (pw > 0) ? (double) PDF_RENDER_WIDTH / pw : 1.0;
+                int sw = (int) (pw * factor);
+                int sh = (int) (ph * factor);
+                if (sw < 1 || sh < 1) {
+                    show_icon (file);
+                    return;
+                }
+
+                var surface = new Cairo.ImageSurface (Cairo.Format.ARGB32, sw, sh);
+                var ctx = new Cairo.Context (surface);
+                ctx.set_source_rgb (1, 1, 1); // white page background
+                ctx.paint ();
+                ctx.scale (factor, factor);
+                page.render (ctx);
+                surface.flush ();
+
+                var pix = Gdk.pixbuf_get_from_surface (surface, 0, 0, sw, sh);
+                if (pix != null) {
+                    show_pixbuf (pix);
+                } else {
+                    show_icon (file);
+                }
             } catch (Error e) {
                 show_icon (file);
             }
-        }
-
-        /* Renders the cached first PDF page at the panel's current width. */
-        private void render_pdf_page () {
-            if (pdf_page == null) {
-                return;
-            }
-            int tw = target_width ();
-            if (tw < 1) {
-                return;
-            }
-            double pw, ph;
-            pdf_page.get_size (out pw, out ph);
-
-            var scale = get_scale_factor ();
-            double target = tw * scale;
-            double factor = (pw > 0) ? target / pw : 1.0;
-            int sw = (int) (pw * factor);
-            int sh = (int) (ph * factor);
-            if (sw < 1 || sh < 1) {
-                return;
-            }
-
-            var surface = new Cairo.ImageSurface (Cairo.Format.ARGB32, sw, sh);
-            var ctx = new Cairo.Context (surface);
-            ctx.set_source_rgb (1, 1, 1); // white page background
-            ctx.paint ();
-            ctx.scale (factor, factor);
-            pdf_page.render (ctx);
-            surface.flush ();
-            surface.set_device_scale (scale, scale);
-            rendered_width = tw;
-            show_surface (surface);
-        }
-
-        /* Re-render image/PDF when the panel width changes (debounced). */
-        private void on_size_allocate (Gtk.Allocation alloc) {
-            if (source_pixbuf == null && pdf_page == null) {
-                return;
-            }
-            if (target_width () == rendered_width || resize_timeout_id > 0) {
-                return;
-            }
-            resize_timeout_id = GLib.Timeout.add (50, () => {
-                resize_timeout_id = 0;
-                if (source_pixbuf != null) {
-                    scale_and_show_pixbuf ();
-                } else if (pdf_page != null) {
-                    render_pdf_page ();
-                }
-                return Source.REMOVE;
-            });
         }
 
         private async void render_text (Files.File file, Cancellable cancel) {
