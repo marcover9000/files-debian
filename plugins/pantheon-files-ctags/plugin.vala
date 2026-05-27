@@ -15,69 +15,43 @@
     with this program.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-[DBus (name = "io.elementary.files.db")]
-interface MarlinDaemon : Object {
-    public abstract async Variant get_uri_infos (string raw_uri) throws GLib.DBusError, GLib.IOError;
-    public abstract async bool record_uris (Variant[] entries) throws GLib.DBusError, GLib.IOError;
-    public abstract async bool delete_entry (string uri) throws GLib.DBusError, GLib.IOError;
-
-}
-
 public class Files.Plugins.CTags : Files.Plugins.Base {
     /* May be used by more than one directory simultaneously so do not make assumptions */
-    private MarlinDaemon daemon;
     private Cancellable cancellable;
     private GLib.List<Files.File> current_selected_files;
 
     public CTags () {
         cancellable = new Cancellable ();
-
-        try {
-            daemon = Bus.get_proxy_sync (BusType.SESSION, "io.elementary.files.db",
-                                         "/io/elementary/files/db");
-        } catch (IOError e) {
-            stderr.printf ("%s\n", e.message);
-        }
     }
 
-    private async void rreal_update_file_info (Files.File file) {
+    /* Colour tags are stored solely in the file's GVfs metadata (metadata::color-tag).
+     * The legacy io.elementary.files.db daemon lookup has been dropped: it is unreliable
+     * on non-elementary systems and the metadata is the source of truth. */
+    private async void read_color_async (Files.File file) {
         try {
-            if (!file.exists || file.color >= 0) {
-                // Delete the entry if file no longer exists or we obtained color info from metadata
-                yield daemon.delete_entry (file.uri);
-                return;
+            var info = yield file.location.query_info_async (
+                "metadata::color-tag", FileQueryInfoFlags.NONE
+            );
+
+            int color = 0;
+            if (info.has_attribute ("metadata::color-tag")) {
+                color = int.parse (info.get_attribute_string ("metadata::color-tag"));
             }
 
-            var info = yield file.location.query_info_async ("metadata::color-tag", FileQueryInfoFlags.NONE);
-            if (info.has_attribute ("metadata::color-tag")) {
-                file.color = int.parse (info.get_attribute_string ("metadata::color-tag"));
-                file.icon_changed ();
-            } else {
-                // Look for color in Files daemon database
-                var rc = yield daemon.get_uri_infos (file.uri);
-
-                VariantIter iter = rc.iterator ();
-                assert (iter.n_children () == 1);
-                VariantIter row_iter = iter.next_value ().iterator ();
-
-                if (row_iter.n_children () == 3) {
-                    /* Only interested in color tag */
-                    int64.parse (row_iter.next_value ().get_string ()); // Skip modified date
-                    row_iter.next_value ().get_string (); // Skip file type
-                    file.color = int.parse (row_iter.next_value ().get_string ());
-                    file.location.set_attribute_string ("metadata::color-tag", file.color.to_string (), FileQueryInfoFlags.NONE);
-                    file.icon_changed (); /* Just need to trigger redraw - the underlying GFile has not changed */
-                    yield daemon.delete_entry (file.uri);
-                }
+            if (file.color != color) {
+                file.color = color;
+                file.icon_changed (); /* Trigger redraw - the underlying GFile has not changed */
             }
         } catch (Error err) {
-            warning ("%s", err.message);
+            if (!(err is IOError.CANCELLED)) {
+                warning ("Could not read colour tag for %s: %s", file.uri, err.message);
+            }
         }
     }
 
     public override void update_file_info (Files.File file) {
         if (!file.is_hidden || Files.Preferences.get_default ().show_hidden_files) {
-            rreal_update_file_info.begin (file);
+            read_color_async.begin (file);
         }
     }
 
@@ -163,11 +137,12 @@ public class Files.Plugins.CTags : Files.Plugins.Base {
 
     private class ColorWidget : Gtk.MenuItem {
         public signal void color_changed (int ncolor);
+        private ColorButton color_button_remove;
         private Gee.ArrayList<ColorButton> color_buttons;
         private const int COLORBOX_SPACING = 3;
 
         construct {
-            var color_button_remove = new ColorButton ("none");
+            color_button_remove = new ColorButton ("none");
             color_buttons = new Gee.ArrayList<ColorButton> ();
             color_buttons.add (new ColorButton ("blue"));
             color_buttons.add (new ColorButton ("mint"));
@@ -209,12 +184,13 @@ public class Files.Plugins.CTags : Files.Plugins.Base {
 
             show_all ();
 
-            // Cannot use this for every button due to this being a MenuItem
+            // The menu item swallows clicks on its children, so dispatch them ourselves
+            // by hit-testing the actual button allocations (robust to spacing/theme).
             button_press_event.connect (button_pressed_cb);
         }
 
         private void clear_checks () {
-            color_buttons.foreach ((b) => { b.active = false; return true;});
+            color_buttons.foreach ((b) => { b.active = false; return true; });
         }
 
         public void check_color (int color) {
@@ -225,42 +201,34 @@ public class Files.Plugins.CTags : Files.Plugins.Base {
             color_buttons[color - 1].active = true;
         }
 
+        private bool widget_hit (Gtk.Widget w, double ex, double ey) {
+            int tx, ty;
+            if (!w.translate_coordinates (this, 0, 0, out tx, out ty)) {
+                return false;
+            }
+
+            Gtk.Allocation alloc;
+            w.get_allocation (out alloc);
+            return ex >= tx && ex <= tx + alloc.width && ey >= ty && ey <= ty + alloc.height;
+        }
+
         private bool button_pressed_cb (Gdk.EventButton event) {
-            var color_button_width = color_buttons[0].get_allocated_width ();
-
-            int y0 = (get_allocated_height () - color_button_width) / 2;
-            int x0 = COLORBOX_SPACING + color_button_width;
-
             double ex, ey;
             event.get_coords (out ex, out ey);
-            if (ey < y0 || ey > y0 + color_button_width) {
+
+            /* "none" removes the colour (index 0) */
+            if (widget_hit (color_button_remove, ex, ey)) {
+                clear_checks ();
+                color_changed (0);
                 return true;
             }
 
-            if (Gtk.StateFlags.DIR_RTL in get_style_context ().get_state ()) {
-                var width = get_allocated_width ();
-                int x = width - 27;
-                for (int i = 0; i < Files.Preferences.TAGS_COLORS.length; i++) {
-                    if (ex <= x && ex >= x - color_button_width) {
-                        color_changed (i);
-                        clear_checks ();
-                        check_color (i);
-                        break;
-                    }
-
-                    x -= x0;
-                }
-            } else {
-                int x = 27;
-                for (int i = 0; i < Files.Preferences.TAGS_COLORS.length; i++) {
-                    if (ex >= x && ex <= x + color_button_width) {
-                        color_changed (i);
-                        clear_checks ();
-                        check_color (i);
-                        break;
-                    }
-
-                    x += x0;
+            for (int i = 0; i < color_buttons.size; i++) {
+                if (widget_hit (color_buttons[i], ex, ey)) {
+                    clear_checks ();
+                    color_buttons[i].active = true;
+                    color_changed (i + 1);
+                    return true;
                 }
             }
 
