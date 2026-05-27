@@ -121,6 +121,11 @@
       <summary>Custom names for the colour tags</summary>
       <description>One name per colour tag (indices 0-9 map to colours 1-10). Empty entries use the generic colour name.</description>
     </key>
+    <key type="b" name="color-tag-as-dot">
+      <default>false</default>
+      <summary>Show colour tags as a dot instead of a name background</summary>
+      <description>When true, a file's colour tag is drawn as a coloured dot on its icon; when false, as a background behind the file name.</description>
+    </key>
   </schema>
 
   <schema path="/io/elementary/files/icon-view/" id="io.elementary.files.icon-view">
