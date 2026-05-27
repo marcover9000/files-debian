@@ -1,106 +1,242 @@
 /*
  * Finder-style preview column for the Miller (column) view.
- * Shows a large thumbnail/icon plus a metadata grid for the selected file.
+ * Renders the actual content of the selected file (image, PDF first page, text)
+ * with a large icon fallback, plus a metadata grid.
  */
 
 namespace Files.View {
-    public class PreviewColumn : Gtk.ScrolledWindow {
-        private const int PREVIEW_ICON_SIZE = 256;
+    public class PreviewColumn : Gtk.Box {
+        private const int ICON_SIZE = 256;
+        private const size_t MAX_TEXT_BYTES = 10 * 1024 * 1024; // 10 MB safety cap
+        private const string[] TEXT_ALLOWLIST = {
+            "application/json", "application/xml", "application/x-yaml",
+            "application/javascript", "application/x-shellscript",
+            "application/toml", "application/x-desktop"
+        };
 
-        private Gtk.Image image;
+        private Gtk.Box content_holder;
         private Gtk.Label name_label;
         private Gtk.Grid info_grid;
         private Files.File? current_file = null;
-        private ulong thumb_handler_id = 0;
-        private int thumb_request = -1;
+        private Cancellable? cancellable = null;
 
         construct {
-            hscrollbar_policy = Gtk.PolicyType.NEVER;
-            vscrollbar_policy = Gtk.PolicyType.AUTOMATIC;
+            orientation = Gtk.Orientation.VERTICAL;
+            spacing = 6;
             get_style_context ().add_class ("files-preview-column");
 
-            var box = new Gtk.Box (Gtk.Orientation.VERTICAL, 6) {
-                margin = 12,
-                valign = Gtk.Align.START
-            };
-
-            image = new Gtk.Image () {
-                halign = Gtk.Align.CENTER
+            content_holder = new Gtk.Box (Gtk.Orientation.VERTICAL, 0) {
+                vexpand = true,
+                halign = Gtk.Align.FILL,
+                valign = Gtk.Align.FILL,
+                margin = 12
             };
 
             name_label = new Gtk.Label (null) {
                 halign = Gtk.Align.CENTER,
                 ellipsize = Pango.EllipsizeMode.MIDDLE,
-                max_width_chars = 24
+                max_width_chars = 24,
+                margin_start = 12,
+                margin_end = 12
             };
             name_label.get_style_context ().add_class ("heading");
 
             info_grid = new Gtk.Grid () {
                 column_spacing = 8,
                 row_spacing = 4,
+                margin = 12,
                 margin_top = 6,
                 halign = Gtk.Align.FILL
             };
 
-            box.add (image);
-            box.add (name_label);
-            box.add (new Gtk.Separator (Gtk.Orientation.HORIZONTAL));
-            box.add (info_grid);
-
-            add (box);
-            box.show_all ();
+            add (content_holder);
+            add (new Gtk.Separator (Gtk.Orientation.HORIZONTAL));
+            add (name_label);
+            add (info_grid);
+            show_all ();
         }
 
         ~PreviewColumn () {
-            disconnect_thumb ();
+            if (cancellable != null) {
+                cancellable.cancel ();
+            }
         }
 
         public void set_file (Files.File? file) {
-            disconnect_thumb ();
+            if (cancellable != null) {
+                cancellable.cancel ();
+            }
+            cancellable = new Cancellable ();
             current_file = file;
+
+            clear_content ();
             if (file == null) {
                 return;
             }
 
-            update_image ();
             populate_info (file);
 
-            if (file.thumbstate != Files.File.ThumbState.READY) {
-                var thumbnailer = Files.Thumbnailer.@get ();
-                if (thumbnailer != null && thumbnailer.queue_file (file, out thumb_request)) {
-                    thumb_handler_id = thumbnailer.finished.connect (on_thumbnail_finished);
+            unowned string? ctype = file.get_ftype ();
+            if (file.is_image () || (ctype != null && GLib.ContentType.is_a (ctype, "image/*"))) {
+                render_image.begin (file, cancellable);
+            } else if (ctype == "application/pdf") {
+                render_pdf (file);
+            } else if (looks_like_text (ctype)) {
+                render_text.begin (file, cancellable);
+            } else {
+                show_icon (file);
+            }
+        }
+
+        private bool looks_like_text (string? ctype) {
+            if (ctype == null || ctype == "application/octet-stream") {
+                return true; // unknown: try as text; render_text validates UTF-8 and falls back
+            }
+            if (GLib.ContentType.is_a (ctype, "text/plain") || ctype.has_prefix ("text/")) {
+                return true;
+            }
+            foreach (unowned string t in TEXT_ALLOWLIST) {
+                if (ctype == t) {
+                    return true;
                 }
             }
+            return false;
         }
 
-        private void on_thumbnail_finished (uint request) {
-            if ((int) request == thumb_request && current_file != null) {
-                update_image ();
-                disconnect_thumb ();
-            }
+        private void clear_content () {
+            content_holder.@foreach ((w) => {
+                w.destroy ();
+            });
         }
 
-        private void disconnect_thumb () {
-            if (thumb_handler_id != 0) {
-                var thumbnailer = Files.Thumbnailer.@get ();
-                if (thumbnailer != null) {
-                    thumbnailer.disconnect (thumb_handler_id);
-                }
-                thumb_handler_id = 0;
-            }
-            thumb_request = -1;
+        private int target_width () {
+            int w = get_allocated_width ();
+            return (w > 48) ? w - 24 : ICON_SIZE; // minus margins; fallback before allocation
         }
 
-        private void update_image () {
-            if (current_file == null) {
-                return;
-            }
+        private void show_surface (Cairo.Surface surface) {
+            clear_content ();
+            var image = new Gtk.Image.from_surface (surface) {
+                halign = Gtk.Align.CENTER,
+                valign = Gtk.Align.START
+            };
+            content_holder.add (image);
+            content_holder.show_all ();
+        }
 
+        private void show_icon (Files.File file) {
             var scale = get_scale_factor ();
-            var pix = current_file.get_icon_pixbuf (PREVIEW_ICON_SIZE, scale);
+            var pix = file.get_icon_pixbuf (ICON_SIZE, scale);
             if (pix != null) {
-                var surface = Gdk.cairo_surface_create_from_pixbuf (pix, scale, null);
-                image.set_from_surface (surface);
+                show_surface (Gdk.cairo_surface_create_from_pixbuf (pix, scale, null));
+            }
+        }
+
+        private async void render_image (Files.File file, Cancellable cancel) {
+            try {
+                var stream = yield file.location.read_async (GLib.Priority.DEFAULT, cancel);
+                var scale = get_scale_factor ();
+                int w = target_width () * scale;
+                var pix = yield new Gdk.Pixbuf.from_stream_at_scale_async (
+                    stream, w, -1, true, cancel
+                );
+                if (cancel.is_cancelled () || current_file != file) {
+                    return;
+                }
+                if (pix != null) {
+                    show_surface (Gdk.cairo_surface_create_from_pixbuf (pix, scale, null));
+                }
+            } catch (Error e) {
+                if (!cancel.is_cancelled () && current_file == file) {
+                    show_icon (file);
+                }
+            }
+        }
+
+        private void render_pdf (Files.File file) {
+            try {
+                var doc = new Poppler.Document.from_gfile (file.location, null, cancellable);
+                if (doc.get_n_pages () < 1) {
+                    show_icon (file);
+                    return;
+                }
+
+                var page = doc.get_page (0);
+                double pw, ph;
+                page.get_size (out pw, out ph);
+
+                var scale = get_scale_factor ();
+                double target = target_width () * scale;
+                double factor = (pw > 0) ? target / pw : 1.0;
+                int sw = (int) (pw * factor);
+                int sh = (int) (ph * factor);
+                if (sw < 1 || sh < 1) {
+                    show_icon (file);
+                    return;
+                }
+
+                var surface = new Cairo.ImageSurface (Cairo.Format.ARGB32, sw, sh);
+                var ctx = new Cairo.Context (surface);
+                ctx.set_source_rgb (1, 1, 1); // white page background
+                ctx.paint ();
+                ctx.scale (factor, factor);
+                page.render (ctx);
+                surface.flush ();
+
+                show_surface (surface);
+            } catch (Error e) {
+                show_icon (file);
+            }
+        }
+
+        private async void render_text (Files.File file, Cancellable cancel) {
+            try {
+                var stream = yield file.location.read_async (GLib.Priority.DEFAULT, cancel);
+                var data = new GLib.ByteArray ();
+                var buffer = new uint8[65536];
+                while (data.len < MAX_TEXT_BYTES) {
+                    ssize_t n = yield stream.read_async (buffer, GLib.Priority.DEFAULT, cancel);
+                    if (n <= 0) {
+                        break;
+                    }
+                    data.append (buffer[0:n]);
+                }
+
+                if (cancel.is_cancelled () || current_file != file) {
+                    return;
+                }
+
+                unowned string text = (string) data.data;
+                if (!text.validate ((ssize_t) data.len)) {
+                    show_icon (file); // not valid UTF-8 → treat as binary
+                    return;
+                }
+
+                clear_content ();
+                var view = new Gtk.TextView () {
+                    editable = false,
+                    cursor_visible = false,
+                    monospace = true,
+                    wrap_mode = Gtk.WrapMode.WORD_CHAR,
+                    left_margin = 6,
+                    right_margin = 6,
+                    top_margin = 6,
+                    bottom_margin = 6
+                };
+                view.buffer.set_text (text, (int) data.len);
+
+                var scroller = new Gtk.ScrolledWindow (null, null) {
+                    hscrollbar_policy = Gtk.PolicyType.AUTOMATIC,
+                    vscrollbar_policy = Gtk.PolicyType.AUTOMATIC,
+                    vexpand = true,
+                    child = view
+                };
+                content_holder.add (scroller);
+                content_holder.show_all ();
+            } catch (Error e) {
+                if (!cancel.is_cancelled () && current_file == file) {
+                    show_icon (file);
+                }
             }
         }
 
