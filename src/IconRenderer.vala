@@ -199,6 +199,31 @@ namespace Files {
 
             style_context.restore ();
 
+            if (Files.ColorTags.show_as_dot () &&
+                file.color >= 1 &&
+                file.color < Files.Preferences.TAGS_COLORS.length &&
+                Files.Preferences.TAGS_COLORS[file.color] != null) {
+
+                double diameter = 11.0 * icon_scale;
+                double pad = 1.0 * icon_scale;
+                double right = (draw_rect.x + draw_rect.width) * icon_scale;
+                double bottom = (draw_rect.y + draw_rect.height) * icon_scale;
+                double cx = right - diameter / 2.0 - pad;
+                double cy = bottom - diameter / 2.0 - pad;
+
+                var rgba = Gdk.RGBA ();
+                rgba.parse (Files.Preferences.TAGS_COLORS[file.color]);
+
+                cr.save ();
+                cr.arc (cx, cy, diameter / 2.0, 0, 2 * GLib.Math.PI);
+                cr.set_source_rgba (rgba.red, rgba.green, rgba.blue, 1.0);
+                cr.fill_preserve ();
+                cr.set_line_width (icon_scale);
+                cr.set_source_rgba (1.0, 1.0, 1.0, 0.85); // light ring for contrast
+                cr.stroke ();
+                cr.restore ();
+            }
+
             if ((selected || prelit) && file != drop_file) {
                 special_icon_name = null;
                 if (selected && prelit) {
