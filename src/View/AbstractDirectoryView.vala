@@ -359,6 +359,12 @@ namespace Files {
             set_up_directory_view ();
             view = create_view ();
 
+            Files.app_settings.changed["color-tag-as-dot"].connect (() => {
+                if (view != null) {
+                    view.queue_draw ();
+                }
+            });
+
             if (view != null) {
                 scrolled_window.child = view;
                 connect_drag_drop_signals (view);

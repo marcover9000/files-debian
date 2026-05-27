@@ -47,7 +47,8 @@ public class Files.View.Window : Hdy.ApplicationWindow {
         {"forward", action_forward, "i"},
         {"back", action_back, "i"},
         {"focus-sidebar", action_focus_sidebar},
-        {"edit-tag-names", action_edit_tag_names}
+        {"edit-tag-names", action_edit_tag_names},
+        {"color-tag-as-dot", null, null, "false", change_state_color_tag_as_dot}
     };
 
     public uint window_number { get; construct; }
@@ -286,6 +287,7 @@ public class Files.View.Window : Hdy.ApplicationWindow {
         get_action ("singleclick-select").set_state (prefs.singleclick_select);
         get_action ("folders-before-files").set_state (prefs.sort_directories_first);
         get_action ("restore-tabs-on-startup").set_state (app_settings.get_boolean ("restore-tabs"));
+        get_action ("color-tag-as-dot").set_state (app_settings.get_boolean ("color-tag-as-dot"));
 
         /*/
         /* Connect and abstract signals to local ones
@@ -1083,6 +1085,12 @@ public class Files.View.Window : Hdy.ApplicationWindow {
         bool state = !action.state.get_boolean ();
         action.set_state (new GLib.Variant.boolean (state));
         Files.app_settings.set_boolean ("show-hiddenfiles", state);
+    }
+
+    public void change_state_color_tag_as_dot (GLib.SimpleAction action) {
+        bool state = !action.state.get_boolean ();
+        action.set_state (new GLib.Variant.boolean (state));
+        Files.app_settings.set_boolean ("color-tag-as-dot", state);
     }
 
     public void change_state_single_click_select (GLib.SimpleAction action) {
