@@ -5,7 +5,8 @@ pantheon_files_deps = [
     zeitgeist_dep,
     project_config_dep,
     portal_dep,
-    portal_gtk3_dep
+    portal_gtk3_dep,
+    poppler_dep
 ]
 
 pantheon_files_exec = executable (
