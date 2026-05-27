@@ -143,6 +143,7 @@ public class Files.Plugins.CTags : Files.Plugins.Base {
 
         construct {
             color_button_remove = new ColorButton ("none");
+            color_button_remove.tooltip_text = _("Remove colour");
             color_buttons = new Gee.ArrayList<ColorButton> ();
             color_buttons.add (new ColorButton ("blue"));
             color_buttons.add (new ColorButton ("mint"));
@@ -164,6 +165,7 @@ public class Files.Plugins.CTags : Files.Plugins.Base {
             colorbox.add (color_button_remove);
 
             for (int i = 0; i < color_buttons.size; i++) {
+                color_buttons[i].tooltip_text = Files.ColorTags.display_name (i + 1);
                 colorbox.add (color_buttons[i]);
             }
 
